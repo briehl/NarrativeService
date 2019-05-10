@@ -160,107 +160,137 @@ class NarrativeManager:
         obj_type = info[2].split('-')[0]
         return type_map.get(obj_type, False)
 
-    def copy_narrative(self, newName, workspaceRef, workspaceId):
+    def copy_narrative(self, new_name, narrative_ref):
+        """
+        Makes a copy of a narrative.
+        new_name - new name for the Narrative (user-facing, not object name)
+        narrative_ref - object reference for the Narrative to copy
+                        (ws/obj/ver, or ws/obj or ws_name/obj_name, etc.)
+
+        This works in the following steps:
+        1. Fetch the Narrative object from the Workspace
+        2. Clone the Workspace, EXCEPT for the Narrative (maintains ws object ids, versions, etc.)
+        3. Save the Narrative object separately so it's at version 1, with updated metadata.
+        """
         time_ms = int(round(time.time() * 1000))
-        newWsName = self.user_id + ':narrative_' + str(time_ms)
+        new_ws_name = self.user_id + ':narrative_' + str(time_ms)
         # add the 'narrative' field to newWsMeta later.
-        newWsMeta = {
-            "narrative_nice_name": newName,
+        new_ws_meta = {
+            "narrative_nice_name": new_name,
             "searchtags": "narrative"
         }
 
-        # start with getting the existing narrative object.
-        currentNarrative = self.ws.get_objects([{'ref': workspaceRef}])[0]
-        if not workspaceId:
-            workspaceId = currentNarrative['info'][6]
-        # Let's prepare exceptions for clone the workspace.
+        # Start with getting the existing narrative object, and workspace id
+        # from its info (we need the object anyway, and this is cheaper than
+        # parsing)
+        cur_narrative = self.ws.get_objects([{'ref': narrative_ref}])[0]
+        ws_id = cur_narrative['info'][6]
+
+        # Prepare exceptions for cloning the workspace.
         # 1) currentNarrative object:
-        excluded_list = [{'objid': currentNarrative['info'][0]}]
+        excluded_list = [{'objid': cur_narrative['info'][0]}]
+
+        # NO MAS DATA_PALETTES
         # 2) let's exclude objects of types under DataPalette handling:
-        data_palette_type = "DataPalette.DataPalette"
-        excluded_types = [data_palette_type]
-        excluded_types.extend(self.DATA_PALETTES_TYPES.keys())
-        add_to_palette_list = []
-        dp_detected = False
-        for obj_type in excluded_types:
-            list_objects_params = {'type': obj_type}
-            if obj_type == data_palette_type:
-                list_objects_params['showHidden'] = 1
-            for info in WorkspaceListObjectsIterator(self.ws, ws_id=workspaceId,
-                                                     list_objects_params=list_objects_params):
-                if obj_type == data_palette_type:
-                    dp_detected = True
-                else:
-                    add_to_palette_list.append({'ref': str(info[6]) + '/' + str(info[0]) +
-                                                '/' + str(info[4])})
-                excluded_list.append({'objid': info[0]})
+        # data_palette_type = "DataPalette.DataPalette"
+        # excluded_types = [data_palette_type]
+        # excluded_types.extend(self.DATA_PALETTES_TYPES.keys())
+        # add_to_palette_list = []
+        # dp_detected = False
+        # for obj_type in excluded_types:
+        #     list_objects_params = {'type': obj_type}
+        #     if obj_type == data_palette_type:
+        #         list_objects_params['showHidden'] = 1
+        #     for info in WorkspaceListObjectsIterator(self.ws, ws_id=workspaceId,
+        #                                              list_objects_params=list_objects_params):
+        #         if obj_type == data_palette_type:
+        #             dp_detected = True
+        #         else:
+        #             add_to_palette_list.append({'ref': str(info[6]) + '/' + str(info[0]) +
+        #                                         '/' + str(info[4])})
+        #         excluded_list.append({'objid': info[0]})
         # clone the workspace EXCEPT for currentNarrative object + obejcts of DataPalette types:
-        newWsId = self.ws.clone_workspace({
-            'wsi': {'id': workspaceId},
-            'workspace': newWsName,
-            'meta': newWsMeta,
+        new_ws_id = self.ws.clone_workspace({
+            'wsi': {'id': ws_id},
+            'workspace': new_ws_name,
+            'meta': new_ws_meta,
             'exclude': excluded_list
         })[0]
         try:
-            if dp_detected:
-                self.dps_cache.call_method("copy_palette", [{'from_workspace': str(workspaceId),
-                                                             'to_workspace': str(newWsId)}],
-                                           self.token)
-            if len(add_to_palette_list) > 0:
-                # There are objects in source workspace that have type under DataPalette handling
-                # but these objects are physically stored in source workspace rather that saved
-                # in DataPalette object. So they weren't copied by "dps.copy_palette".
-                self.dps_cache.call_method("add_to_palette", [{'workspace': str(newWsId),
-                                                               'new_refs': add_to_palette_list}],
-                                           self.token)
+            # if dp_detected:
+            #     self.dps_cache.call_method("copy_palette", [{'from_workspace': str(workspaceId),
+            #                                                  'to_workspace': str(newWsId)}],
+            #                                self.token)
+            # if len(add_to_palette_list) > 0:
+            #     # There are objects in source workspace that have type under DataPalette handling
+            #     # but these objects are physically stored in source workspace rather that saved
+            #     # in DataPalette object. So they weren't copied by "dps.copy_palette".
+            #     self.dps_cache.call_method("add_to_palette", [{'workspace': str(newWsId),
+            #                                                    'new_refs': add_to_palette_list}],
+            #                                self.token)
 
             # update the ref inside the narrative object and the new workspace metadata.
-            newNarMetadata = currentNarrative['info'][10]
-            newNarMetadata['name'] = newName
-            newNarMetadata['ws_name'] = newWsName
-            newNarMetadata['job_info'] = json.dumps({'queue_time': 0, 'running': 0,
-                                                     'completed': 0, 'run_time': 0, 'error': 0})
+            new_nar_metadata = cur_narrative['info'][10]
+            new_nar_metadata['name'] = new_name
+            new_nar_metadata['ws_name'] = new_ws_name
+            new_nar_metadata['job_info'] = json.dumps({'queue_time': 0, 'running': 0,
+                                                       'completed': 0, 'run_time': 0,
+                                                       'error': 0})
 
-            is_temporary = newNarMetadata.get('is_temporary', 'false')
-            if 'is_temporary' not in newNarMetadata:
-                if newNarMetadata['name'] == 'Untitled' or newNarMetadata['name'] is None:
+            # Set the "is_temporary" metadata flag. This is a string, either "true" or "false"
+            # If it's not already present in the old object metadata, it should be set with
+            # these rules
+            # - true if the name is either "Untitled" or not present,
+            # - false otherwise
+            is_temporary = new_nar_metadata.get('is_temporary', 'false')
+            if 'is_temporary' not in new_nar_metadata:
+                if new_nar_metadata.get('name', 'Untitled') == 'Untitled':
                     is_temporary = 'true'
-                newNarMetadata['is_temporary'] = is_temporary
+                new_nar_metadata['is_temporary'] = is_temporary
 
-            currentNarrative['data']['metadata']['name'] = newName
-            currentNarrative['data']['metadata']['ws_name'] = newWsName
-            currentNarrative['data']['metadata']['job_ids'] = {'apps': [], 'methods': [],
-                                                               'job_usage': {'queue_time': 0,
-                                                                             'run_time': 0}}
+            cur_narrative['data']['metadata']['name'] = new_name
+            cur_narrative['data']['metadata']['ws_name'] = new_ws_name
+            cur_narrative['data']['metadata']['job_ids'] = {
+                'apps': [],
+                'methods': [],
+                'job_usage': {
+                    'queue_time': 0,
+                    'run_time': 0
+                }
+            }
             # save the shiny new Narrative so it's at version 1
-            newNarInfo = self.ws.save_objects({'id': newWsId, 'objects':
-                                               [{'type': currentNarrative['info'][2],
-                                                 'data': currentNarrative['data'],
-                                                 'provenance': currentNarrative['provenance'],
-                                                 'name': currentNarrative['info'][1],
-                                                 'meta': newNarMetadata}]})
+            new_nar_info = self.ws.save_objects({
+                'id': new_ws_id,
+                'objects': [{
+                    'type': cur_narrative['info'][2],
+                    'data': cur_narrative['data'],
+                    'provenance': cur_narrative['provenance'],
+                    'name': cur_narrative['info'][1],
+                    'meta': new_nar_metadata
+                }]
+            })
             # now, just update the workspace metadata to point
             # to the new narrative object
 
-            if 'worksheets' in currentNarrative['data']:  # handle legacy.
-                num_cells = len(currentNarrative['data']['worksheets'][0]['cells'])
+            if 'worksheets' in cur_narrative['data']:  # handle legacy.
+                num_cells = len(cur_narrative['data']['worksheets'][0]['cells'])
             else:
-                num_cells = len(currentNarrative['data']['cells'])
-            newNarId = newNarInfo[0][0]
+                num_cells = len(cur_narrative['data']['cells'])
+            new_nar_id = new_nar_info[0][0]
             self.ws.alter_workspace_metadata({
                 'wsi': {
-                    'id': newWsId
+                    'id': new_ws_id
                 },
                 'new': {
-                    'narrative': str(newNarId),
+                    'narrative': str(new_nar_id),
                     'is_temporary': is_temporary,
                     'cell_count': str(num_cells)
                 }
             })
-            return {'newWsId': newWsId, 'newNarId': newNarId}
+            return {'newWsId': new_ws_id, 'newNarId': new_nar_id}
         except Exception:
-            # let's delete copy of workspace so it's out of the way - it's broken
-            self.ws.delete_workspace({'id': newWsId})
+            # delete copy of workspace so it's out of the way - it's broken
+            self.ws.delete_workspace({'id': new_ws_id})
             raise
 
     def create_new_narrative(self, app, method, appparam, appData, markdown,

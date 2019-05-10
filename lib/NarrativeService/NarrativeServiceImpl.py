@@ -167,8 +167,7 @@ class NarrativeService:
         #BEGIN copy_narrative
         newName = params['newName']
         workspaceRef = params['workspaceRef']
-        workspaceId = params.get('workspaceId', None)
-        returnVal = self._nm(ctx).copy_narrative(newName, workspaceRef, workspaceId)
+        returnVal = self._nm(ctx).copy_narrative(newName, workspaceRef)
         #END copy_narrative
 
         # At some point might do deeper type checking...
