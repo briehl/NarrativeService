@@ -187,29 +187,9 @@ class NarrativeManager:
         ws_id = cur_narrative['info'][6]
 
         # Prepare exceptions for cloning the workspace.
-        # 1) currentNarrative object:
+        # Just currentNarrative object:
         excluded_list = [{'objid': cur_narrative['info'][0]}]
 
-        # NO MAS DATA_PALETTES
-        # 2) let's exclude objects of types under DataPalette handling:
-        # data_palette_type = "DataPalette.DataPalette"
-        # excluded_types = [data_palette_type]
-        # excluded_types.extend(self.DATA_PALETTES_TYPES.keys())
-        # add_to_palette_list = []
-        # dp_detected = False
-        # for obj_type in excluded_types:
-        #     list_objects_params = {'type': obj_type}
-        #     if obj_type == data_palette_type:
-        #         list_objects_params['showHidden'] = 1
-        #     for info in WorkspaceListObjectsIterator(self.ws, ws_id=workspaceId,
-        #                                              list_objects_params=list_objects_params):
-        #         if obj_type == data_palette_type:
-        #             dp_detected = True
-        #         else:
-        #             add_to_palette_list.append({'ref': str(info[6]) + '/' + str(info[0]) +
-        #                                         '/' + str(info[4])})
-        #         excluded_list.append({'objid': info[0]})
-        # clone the workspace EXCEPT for currentNarrative object + obejcts of DataPalette types:
         new_ws_id = self.ws.clone_workspace({
             'wsi': {'id': ws_id},
             'workspace': new_ws_name,
@@ -217,18 +197,6 @@ class NarrativeManager:
             'exclude': excluded_list
         })[0]
         try:
-            # if dp_detected:
-            #     self.dps_cache.call_method("copy_palette", [{'from_workspace': str(workspaceId),
-            #                                                  'to_workspace': str(newWsId)}],
-            #                                self.token)
-            # if len(add_to_palette_list) > 0:
-            #     # There are objects in source workspace that have type under DataPalette handling
-            #     # but these objects are physically stored in source workspace rather that saved
-            #     # in DataPalette object. So they weren't copied by "dps.copy_palette".
-            #     self.dps_cache.call_method("add_to_palette", [{'workspace': str(newWsId),
-            #                                                    'new_refs': add_to_palette_list}],
-            #                                self.token)
-
             # update the ref inside the narrative object and the new workspace metadata.
             new_nar_metadata = cur_narrative['info'][10]
             new_nar_metadata['name'] = new_name
