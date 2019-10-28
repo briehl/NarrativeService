@@ -807,53 +807,6 @@ class NarrativeServiceTest(unittest.TestCase):
         self.assertEqual(reads_obj_name, info[1])
 
     # @unittest.skip
-    # def test_two_users_set_inside_dp(self):
-    #     ws_name1_1 = self.createWs()
-    #     # Injecting reads object (real copy) into workspace1
-    #     orig_reads_obj_ref = self.__class__.example_reads_ref
-    #     reads_obj_name = "TestReads"
-    #     self.getWsClient().copy_object({'from': {'ref': orig_reads_obj_ref},
-    #                                     'to': {'workspace': ws_name1_1,
-    #                                            'name': reads_obj_name}})
-    #     copy_reads_obj_ref = ws_name1_1 + '/' + reads_obj_name
-    #     ws_name1_2 = self.createWs()
-    #     set_obj_name = "MyReadsSet.1"
-    #     sapi = SetAPI(self.__class__.serviceWizardURL, token=self.getContext()['token'],
-    #                   service_ver=self.__class__.SetAPI_version)
-    #     sapi.save_reads_set_v1({'workspace': ws_name1_2, 'output_object_name': set_obj_name,
-    #                             'data': {'description': '', 'items': [{'ref': copy_reads_obj_ref}]}})
-    #     orig_set_ref = ws_name1_2 + '/' + set_obj_name
-    #     # Making DP-copy of reads set object by user2
-    #     ws_name2 = self.createWs2()
-    #     # Let's share workspace containing set with user2
-    #     self.getWsClient().set_permissions({'workspace': ws_name1_2, 'new_permission': 'r',
-    #                                         'users': [self.getContext2()['user_id']]})
-    #     # Import reads set ref into DataPalette of third workspace
-    #     dps = DataPaletteService(self.__class__.serviceWizardURL,
-    #                               token=self.getContext2()['token'],
-    #                               service_ver=self.__class__.DataPalette_version)
-    #     dps.add_to_palette({'workspace': ws_name2, 'new_refs': [{'ref': orig_set_ref}]})
-    #     dp_ref_map = dps.list_data({'workspaces': [ws_name2]})['data_palette_refs']
-    #     set_ref_path = next(iter(dp_ref_map.values())) + ';' + orig_set_ref
-    #     reads_ref_path = set_ref_path + ';' + copy_reads_obj_ref
-    #     # Un-share original workspace
-    #     self.getWsClient().set_permissions({'workspace': ws_name1_2, 'new_permission': 'n',
-    #                                         'users': [self.getContext2()['user_id']]})
-    #     # Let's check that we can list set and see reads object as set item
-    #     ret = self.getImpl().list_objects_with_sets(self.getContext2(),
-    #                                                 {"ws_name": ws_name2})[0]["data"]
-    #     self.assertEqual(1, len(ret))
-    #     item = ret[0]
-    #     self.assertTrue('set_items' in item)
-    #     self.assertTrue('set_items_info' in item['set_items'])
-    #     self.assertEqual(1, len(item['set_items']['set_items_info']))
-    #     # Check access to reads and to set objects
-    #     info = self.getWsClient2().get_object_info_new({'objects': [{'ref': set_ref_path}]})[0]
-    #     self.assertEqual(set_obj_name, info[1])
-    #     info = self.getWsClient2().get_object_info_new({'objects': [{'ref': reads_ref_path}]})[0]
-    #     self.assertEqual(reads_obj_name, info[1])
-
-    # @unittest.skip
     def test_bulk_list(self):
         try:
             ids = []
